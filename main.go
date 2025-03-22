@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -19,6 +20,8 @@ type TelegramMessageRequest struct {
 }
 
 var telegramWriter *TelegramWriter
+
+var environment string
 
 type TelegramWriter struct {
 	token  string
@@ -36,6 +39,7 @@ func (tw *TelegramWriter) sendMessage(msg string) error {
 	}
 
 	_, err = http.Post(url, "application/json", bytes.NewReader(jsonBody))
+
 	return err
 }
 
@@ -47,6 +51,8 @@ func init() {
 	if botToken == "" || chatId == "" {
 		log.Fatal("Missing environment variables!")
 	}
+
+	environment = os.Getenv("ENVIRONMENT")
 
 	telegramWriter = &TelegramWriter{
 		token:  botToken,
@@ -75,18 +81,30 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	}, nil
 }
 
+func devToLambdaHandler(w http.ResponseWriter, r *http.Request) {
+	body, _ := io.ReadAll(r.Body)
+
+	lambdaReq := events.APIGatewayProxyRequest{
+		Body: string(body),
+	}
+
+	res, err := handler(lambdaReq)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Something went wrong!"))
+		return
+	}
+
+	w.WriteHeader(res.StatusCode)
+	w.Write([]byte(res.Body))
+}
+
 func main() {
-	lambda.Start(handler)
 
-	// For local testing
-	// req := events.APIGatewayProxyRequest{
-	// 	Body: "Hello\nWorld",
-	// }
-
-	// resp, err := handler(req)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// println(resp.Body)
+	if environment == "dev" {
+		http.HandleFunc("/telegramWriter", devToLambdaHandler)
+		http.ListenAndServe(":8080", nil)
+	} else {
+		lambda.Start(handler)
+	}
 }
