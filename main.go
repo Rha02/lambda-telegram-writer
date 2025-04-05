@@ -66,7 +66,9 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		return events.APIGatewayProxyResponse{
 			StatusCode: 400,
 			Headers: map[string]string{
-				"Content-Type": "application/json",
+				"Content-Type":                 "application/json",
+				"Access-Control-Allow-Origin":  "*",
+				"Access-Control-Allow-Headers": "Content-Type",
 			},
 			Body: `{ "error": "Failed to send message" }`,
 		}, nil
@@ -75,7 +77,9 @@ func handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	return events.APIGatewayProxyResponse{
 		StatusCode: 201,
 		Headers: map[string]string{
-			"Content-Type": "application/json",
+			"Content-Type":                 "application/json",
+			"Access-Control-Allow-Origin":  "*",
+			"Access-Control-Allow-Headers": "Content-Type",
 		},
 		Body: `{ "message": "Message sent successfully!" }`,
 	}, nil
